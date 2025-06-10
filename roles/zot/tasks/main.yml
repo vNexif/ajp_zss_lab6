@@ -1,0 +1,15 @@
+- name: Add zot Helm repo chart
+  kubernetes.core.helm_repository:
+    name: project-zot
+    repo_url: http://zotregistry.dev/helm-charts
+
+- name: Deploy zot
+  kubernetes.core.helm:
+    name: project-zot
+    chart_ref: project-zot/zot
+    release_namespace: zot
+    create_namespace: true
+    kubeconfig: /home/vagrant/.kube/config
+    values:
+      image:
+        repository: ghcr.io/project-zot/zot-linux-arm64
