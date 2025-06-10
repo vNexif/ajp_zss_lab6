@@ -1,0 +1,85 @@
+- name: Install K3s without Traefik and with custom DNS
+  shell: |
+    curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable traefik" sh -
+
+- name: Create custom resolv.conf for Technitium DNS
+  copy:
+    dest: /etc/rancher/k3s/custom-resolv.conf
+    content: |
+      nameserver 192.168.56.20
+
+- name: Install kubectl
+  shell: |
+    curl -LO "https://dl.k8s.io/release/$(curl -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl"
+    chmod +x kubectl
+    mv kubectl /usr/local/bin/
+  args:
+    creates: /usr/local/bin/kubectl
+
+- name: Install Helm
+  shell: |
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+  args:
+    creates: /usr/local/bin/helm
+
+- name: Install k9s
+  shell: |
+    K9S_VER=$(curl -s https://api.github.com/repos/derailed/k9s/releases/latest | grep tag_name | cut -d '"' -f 4)
+    curl -Lo k9s.tgz https://github.com/derailed/k9s/releases/download/${K9S_VER}/k9s_Linux_arm64.tar.gz
+    tar -xzf k9s.tgz k9s
+    chmod +x k9s
+    mv k9s /usr/local/bin/
+  args:
+    creates: /usr/local/bin/k9s
+
+- name: Wait for K3s to start
+  shell: kubectl get nodes
+  register: result
+  until: result.rc == 0
+  retries: 10
+  delay: 5
+
+- name: Create a directory if it does not exist
+  ansible.builtin.file:
+    path: "{{ user_home }}/.kube"
+    owner: vagrant
+    group: vagrant
+    state: directory
+    mode: '0750'
+
+- name: Copy kubeconfig to user folder
+  copy:
+    src: /etc/rancher/k3s/k3s.yaml
+    dest: "{{ user_home }}/.kube/config"
+    remote_src: yes
+    owner: vagrant
+    group: vagrant
+    mode: '0600'
+
+- name: Ensure KUBECONFIG is exported in .bashrc
+  lineinfile:
+    path: "{{ user_home }}/.bashrc"
+    line: 'export KUBECONFIG={{ user_home }}/.kube/config'
+    insertafter: EOF
+    state: present
+    owner: vagrant
+    group: vagrant
+    mode: '0644'
+
+- name: Add Traefik Helm repo
+  become: false
+  shell: helm repo add traefik https://traefik.github.io/charts && helm repo update
+
+- name: Install Traefik via Helm with CRDs
+  become: false
+  shell: |
+    helm upgrade --install traefik traefik/traefik \
+      --namespace traefik \
+      --create-namespace \
+      --set additionalArguments="{--providers.kubernetescrd}"
+
+#- name: Fix kubeconfig server IP
+#  lineinfile:
+#    path: "{{ user_home }}/.kube/config"
+#    regexp: '^ *server: https://127.0.0.1:6443'
+#    line: '    server: https://192.168.56.10:6443'

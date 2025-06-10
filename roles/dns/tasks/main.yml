@@ -1,0 +1,40 @@
+- name: Install dependencies
+  apt:
+    name: [curl, docker.io]
+    update_cache: yes
+
+- name: Enable and start Docker
+  systemd:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Create Technitium config directory
+  file:
+    path: /opt/technitium
+    state: directory
+
+- name: Start Technitium DNS Server
+  docker_container:
+    name: technitium-dns
+    image: technitium/dns-server
+    ports:
+      - "5353:53/udp"
+      - "5353:53/tcp"
+      - "5380:5380"
+    volumes:
+      - /opt/technitium:/etc/dns
+    restart_policy: always
+
+- name: Configure DNS zone test.lab
+  shell: |
+    curl -s -X POST http://localhost:5380/api/zones/create \
+    -H "Content-Type: application/json" \
+    -d '{
+      "ZoneName": "test.lab",
+      "ZoneType": "Primary",
+      "IsReverseLookupZone": false,
+      "EnableDynamicUpdates": false
+    }'
+  register: zone_creation
+  failed_when: zone_creation.rc != 0 and "'already exists'" not in zone_creation.stdout

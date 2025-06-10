@@ -1,0 +1,9 @@
+- name: Add Traefik Helm repo
+  shell: helm repo add traefik https://traefik.github.io/charts && helm repo update
+
+- name: Install Traefik via Helm with CRDs
+  shell: |
+    helm upgrade --install traefik traefik/traefik \
+      --namespace traefik \
+      --create-namespace \
+      --set additionalArguments="{--providers.kubernetescrd}"
