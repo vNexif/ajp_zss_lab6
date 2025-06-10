@@ -66,20 +66,3 @@
     group: vagrant
     mode: '0644'
 
-- name: Add Traefik Helm repo
-  become: false
-  shell: helm repo add traefik https://traefik.github.io/charts && helm repo update
-
-- name: Install Traefik via Helm with CRDs
-  become: false
-  shell: |
-    helm upgrade --install traefik traefik/traefik \
-      --namespace traefik \
-      --create-namespace \
-      --set additionalArguments="{--providers.kubernetescrd}"
-
-#- name: Fix kubeconfig server IP
-#  lineinfile:
-#    path: "{{ user_home }}/.kube/config"
-#    regexp: '^ *server: https://127.0.0.1:6443'
-#    line: '    server: https://192.168.56.10:6443'
