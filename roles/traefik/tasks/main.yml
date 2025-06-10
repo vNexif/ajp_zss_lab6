@@ -1,9 +1,12 @@
-- name: Add Traefik Helm repo
-  shell: helm repo add traefik https://traefik.github.io/charts && helm repo update
+- name: Add Traefik Helm repo chart
+  kubernetes.core.helm_repository:
+    name: traefik
+    repo_url: https://traefik.github.io/charts
 
-- name: Install Traefik via Helm with CRDs
-  shell: |
-    helm upgrade --install traefik traefik/traefik \
-      --namespace traefik \
-      --create-namespace \
-      --set additionalArguments="{--providers.kubernetescrd}"
+- name: Deploy traefik
+  kubernetes.core.helm:
+    name: traefik
+    chart_ref: traefik/traefik
+    release_namespace: traefik
+    create_namespace: true
+    kubeconfig: /home/vagrant/.kube/config
