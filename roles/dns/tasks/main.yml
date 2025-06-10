@@ -1,6 +1,8 @@
 - name: Install dependencies
   apt:
-    name: [curl, docker.io]
+    name:
+      - curl
+      - docker.io
     update_cache: yes
 
 - name: Enable and start Docker
@@ -9,32 +11,64 @@
     enabled: true
     state: started
 
+- name: Install gnome
+  apt:
+    name:
+      - vanilla-gnome-desktop
+      - vanilla-gnome-default-settings
+    update_cache: yes
+
+- name: Set graphical target
+  shell: systemctl set-default graphical.target
+
+- name: Reboot a slow machine that might have lots of updates to apply
+  ansible.builtin.reboot:
+    reboot_timeout: 1600
+
 - name: Create Technitium config directory
   file:
     path: /opt/technitium
     state: directory
 
-- name: Start Technitium DNS Server
+- name: Start Technitium DNS Server -- Pull Image
+  docker_container:
+    name: technitium-dns
+    image: technitium/dns-server
+    restart_policy: always
+
+- name: Stop Technitium DNS Server -- Pull Image
+  docker_container:
+    name: technitium-dns
+    state: absent
+
+- name: Stop and disable systemd-resolved
+  systemd:
+    name: systemd-resolved
+    enabled: false
+    state: stopped
+
+- name: Start Technitium DNS Server -- Start Image
   docker_container:
     name: technitium-dns
     image: technitium/dns-server
     ports:
-      - "5353:53/udp"
-      - "5353:53/tcp"
+      - "53:53/udp"
+      - "53:53/tcp"
       - "5380:5380"
     volumes:
       - /opt/technitium:/etc/dns
     restart_policy: always
 
-- name: Configure DNS zone test.lab
-  shell: |
-    curl -s -X POST http://localhost:5380/api/zones/create \
-    -H "Content-Type: application/json" \
-    -d '{
-      "ZoneName": "test.lab",
-      "ZoneType": "Primary",
-      "IsReverseLookupZone": false,
-      "EnableDynamicUpdates": false
-    }'
-  register: zone_creation
-  failed_when: zone_creation.rc != 0 and "'already exists'" not in zone_creation.stdout
+
+#- name: Configure DNS zone test.lab
+#  shell: |
+#    curl -s -X POST http://localhost:5380/api/zones/create \
+#    -H "Content-Type: application/json" \
+#    -d '{
+#      "ZoneName": "test.lab",
+#      "ZoneType": "Primary",
+#      "IsReverseLookupZone": false,
+#      "EnableDynamicUpdates": false
+#    }'
+#  register: zone_creation
+#  failed_when: zone_creation.rc != 0 and "'already exists'" not in zone_creation.stdout
