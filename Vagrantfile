@@ -4,9 +4,11 @@ Vagrant.configure("2") do |config|
   config.vm.define "dns-node" do |dns|
     dns.vm.hostname = "dns-node"
     dns.vm.network "private_network", ip: "192.168.56.20"
-    dns.vm.provider "virtualbox" do |vb|
-      vb.memory = 1024
-      vb.cpus = 2
+#     dns.vm.provider "virtualbox" do |vb|
+    dns.vm.provider :vmware_desktop do |vb|
+      vb.memory = 4096
+      vb.cpus = 4
+      vb.gui = true
     end
     dns.vm.provision "ansible" do |ansible|
       ansible.playbook = "dns-playbook.yml"
@@ -17,9 +19,11 @@ Vagrant.configure("2") do |config|
   config.vm.define "k3s-master" do |k3s|
     k3s.vm.hostname = "k3s-master"
     k3s.vm.network "private_network", ip: "192.168.56.10"
-    k3s.vm.provider "virtualbox" do |vb|
+#     k3s.vm.provider "virtualbox" do |vb|
+    k3s.vm.provider :vmware_desktop do |vb|
       vb.memory = 8192
       vb.cpus = 4
+      vb.gui = true
     end
     k3s.vm.provision "ansible" do |ansible|
       ansible.playbook = "k3s-playbook.yml"
