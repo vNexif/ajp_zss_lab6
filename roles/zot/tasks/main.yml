@@ -13,3 +13,25 @@
     values:
       image:
         repository: ghcr.io/project-zot/zot-linux-arm64
+      service:
+        type: ClusterIP
+
+- name: Create a zot ingressRoute
+  kubernetes.core.k8s:
+    kubeconfig: /home/vagrant/.kube/config
+    state: present
+    definition:
+      apiVersion: traefik.io/v1alpha1
+      kind: IngressRoute
+      metadata:
+        name: zot.test.lab
+        namespace: zot
+      spec:
+        entryPoints:
+          - web
+        routes:
+          - match: Host(`zot.test.lab`)
+            kind: Rule
+            services:
+              - name: project-zot
+                port: 5000

@@ -1,3 +1,11 @@
+- name: Install dependencies
+  apt:
+    name:
+      - curl
+      - python3-pip
+      - python3-kubernetes
+    update_cache: yes
+
 - name: Install K3s without Traefik and with custom DNS
   shell: |
     curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--disable traefik" sh -
